@@ -21,5 +21,5 @@ COPY evaluation evaluation
 COPY --from=site /app/dist /app/site
 RUN mkdir -p /data
 EXPOSE 8000
-# HOST=:: on Railway (IPv6 + IPv4 private networking); 0.0.0.0 elsewhere.
+# Keep HOST=0.0.0.0: with "::" asyncio binds IPv6-only and IPv4 health checks fail.
 CMD uvicorn api.server:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000}
