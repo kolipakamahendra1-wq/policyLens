@@ -6,6 +6,9 @@ COPY frontend .
 RUN npm run build
 
 FROM nginx:1.27-alpine
-COPY infrastructure/nginx.conf /etc/nginx/conf.d/default.conf
+# Defaults suit docker compose. On Railway: LISTEN="[::]:80 ipv6only=off", RESOLVER=[fd12::10],
+# BACKEND_URL=http://<backend>.railway.internal:8000 (private networking is IPv6).
+ENV LISTEN=80 BACKEND_URL=http://backend:8000 RESOLVER="127.0.0.11 ipv6=off"
+COPY infrastructure/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
