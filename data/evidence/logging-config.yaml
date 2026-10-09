@@ -1,0 +1,6 @@
+# customers-api audit logging
+audit_logging:
+  enabled: true
+  events: [record.read, record.write, record.delete]
+  fields: [actor, record_id, timestamp]
+  sink: central-siem

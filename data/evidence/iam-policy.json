@@ -1,0 +1,7 @@
+{
+  "role": "customers-api-prod",
+  "least_privilege": true,
+  "permissions": ["rds:Connect", "kms:Decrypt"],
+  "mfa_required_for_admin": true,
+  "access_review": "quarterly by data owner"
+}

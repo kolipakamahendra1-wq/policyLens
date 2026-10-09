@@ -1,0 +1,23 @@
+{
+  "skill_name": "policylens-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Is review #1 in PolicyLens (the Customer profile API) ready to ship? Give me a short summary of what's blocking it and what evidence alice still needs to provide. Save your summary to summary.md.",
+      "expected_output": "A summary that keeps PolicyLens statuses as-is (no upgrading UNKNOWN to pass), quotes policy text separately from interpretation, lists requested evidence (rollback plan, API spec, DPIA), surfaces guardrail notes, and flags the DATA-RET §2 FAIL as a likely model arithmetic error (2555 days = 7 years) for the reviewer without changing it.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "we're adding an admin console so support staff can look up customer records. before I build anything, which of our internal policies apply and what evidence should I get ready? don't evaluate anything yet. write the answer to applicable-policies.md",
+      "expected_output": "Creates a PolicyLens review (or uses the controls preview) and lists the matched requirements with their exact citations (e.g. SEC-ACCESS §2.1/§2.2/§2.3, SEC-LOG §1, DATA-CLASS §2) and the evidence types to prepare (IAM configuration, logging configuration, etc). Does not run /evaluate.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Run a PolicyLens compliance review for the loyalty-points service, which stores customer points balances. The only evidence we have right now is the retention config at data/evidence/retention-config.yaml. Save the audit package as audit.md.",
+      "expected_output": "Submits a review as an engineer, attaches only the provided retention file (does not fabricate other evidence), evaluates, and saves the Markdown audit package. Reports Needs Review with the retention findings and the evidence still missing; does not record an approval decision.",
+      "files": ["data/evidence/retention-config.yaml"]
+    }
+  ]
+}

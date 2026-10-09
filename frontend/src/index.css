@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-vellum: #eef1f4;
+  --color-paper: #ffffff;
+  --color-ink: #1d2633;
+  --color-ink-soft: #4a5566;
+  --color-rule: #d5dbe3;
+  --color-pen: #2f4ba8;
+  --color-pen-dark: #233a85;
+  --color-pass: #2e7d4f;
+  --color-fail: #b3261e;
+  --color-unknown: #8a6d1f;
+  --color-human: #6b3fa0;
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+}
+
+html {
+  background: var(--color-vellum);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-vellum);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-pen);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Verbatim policy text: always serif, always marked with its citation. */
+.policy-text {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+}
+
+/* The one orchestrated motion: findings on the hero sheet are stamped in sequence. */
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(1.25) rotate(-4deg); }
+  70% { opacity: 1; transform: scale(0.97) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+}
+.stamp-in {
+  opacity: 0;
+  animation: stamp 420ms cubic-bezier(.2,.8,.3,1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp-in { animation: none; opacity: 1; transform: rotate(-2deg); }
+}

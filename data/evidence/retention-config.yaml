@@ -1,0 +1,5 @@
+# customers-api retention
+retention:
+  customer_records_days: 2555     # 7 years
+  lifecycle_rule: automated purge job, nightly
+  backups_follow_primary_retention: true

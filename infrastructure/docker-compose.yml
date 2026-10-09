@@ -1,0 +1,40 @@
+# Run from the repo root:  docker compose -f infrastructure/docker-compose.yml up --build
+# The LLM and embeddings use Ollama running on the host (free, local).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: policylens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-policylens}
+      POSTGRES_DB: policylens
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U policylens"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: { context: .., dockerfile: infrastructure/Dockerfile.backend }
+    environment:
+      DATABASE_URL: postgresql+psycopg://policylens:${POSTGRES_PASSWORD:-policylens}@db:5432/policylens
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      JWT_SECRET: ${JWT_SECRET:-change-me-docker-dev-secret-at-least-32-bytes}
+      EVIDENCE_KEY: ${EVIDENCE_KEY:-}
+      SEED_PASSWORD: ${SEED_PASSWORD:-policylens}
+      CORS_ORIGINS: http://localhost:8088
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: [evidence:/data]
+    depends_on:
+      db: { condition: service_healthy }
+
+  frontend:
+    build: { context: .., dockerfile: infrastructure/Dockerfile.frontend }
+    ports: ["8088:80"]
+    depends_on: [backend]
+
+volumes:
+  pgdata:
+  evidence:

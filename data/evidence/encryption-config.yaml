@@ -1,0 +1,7 @@
+# customers-api data store
+database:
+  engine: postgres
+  storage_encrypted: true        # encrypted at rest, AES-256
+  kms_key: alias/customers-api
+network:
+  tls_min_version: "1.2"         # TLS enforced in transit
