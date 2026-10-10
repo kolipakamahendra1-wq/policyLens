@@ -36,6 +36,23 @@ export interface Control {
   id: number; code: string; text: string; risk: string; evidence_types: string[]; citation: string
   heading: string; policy_title: string; policy_text: string; retrieval_score: number
 }
+export interface Profile {
+  id: number; username: string; display_name: string; email: string | null; role: Role
+  is_active: boolean; is_demo: boolean; created_at: string; last_login_at: string | null
+}
+export interface DashboardReview {
+  id: number; title: string; submitted_by: string; status: string; result: string | null
+  open: number; findings: number; created_at: string
+}
+export interface Dashboard {
+  me: Profile
+  counts: { my_open: number; returned_to_me: number; awaiting_decision: number; approved: number; rejected: number; policies: number }
+  finding_statuses: Record<Status, number>
+  needs_my_action: DashboardReview[]; decision_queue: DashboardReview[]; my_recent: DashboardReview[]
+  recent_activity: { action: string; target: string; ts: string }[]
+}
+type TokenResponse = { access_token: string; username: string; role: Role }
+
 export interface AuditEntry { id: number; actor: string; action: string; target: string; detail: Record<string, unknown>; ts: string }
 export interface AuditPackage {
   review_id: number; title: string; generated_at: string; disclaimer: string
@@ -71,7 +88,7 @@ async function request<T>(path: string, init: RequestInit = {}, raw = false): Pr
   if (init.body && !(init.body instanceof FormData) && !(init.body instanceof URLSearchParams))
     headers.set('Content-Type', 'application/json')
   const res = await fetch(`/api${path}`, { ...init, headers })
-  if (res.status === 401 && path !== '/token') {
+  if (res.status === 401 && path !== '/token' && path !== '/me/password') {
     saveSession(null)
     window.location.assign('/login?expired=1')
   }
@@ -91,6 +108,20 @@ export const api = {
     request<{ access_token: string; username: string; role: Role }>('/token', {
       method: 'POST', body: new URLSearchParams({ username, password }),
     }),
+  register: (body: { username: string; password: string; display_name: string; email: string }) =>
+    request<TokenResponse>('/register', { method: 'POST', body: JSON.stringify(body) }),
+  me: () => request<Profile>('/me'),
+  updateMe: (body: { display_name: string; email: string }) =>
+    request<Profile>('/me', { method: 'PATCH', body: JSON.stringify(body) }),
+  changePassword: (current_password: string, new_password: string) =>
+    request<TokenResponse>('/me/password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
+  signOutEverywhere: () => request<TokenResponse>('/me/sign-out-everywhere', { method: 'POST' }),
+  dashboard: () => request<Dashboard>('/dashboard'),
+  users: () => request<Profile[]>('/users'),
+  updateUser: (id: number, body: { role?: Role; is_active?: boolean }) =>
+    request<Profile>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  resetPassword: (id: number) =>
+    request<{ username: string; temporary_password: string }>(`/users/${id}/reset-password`, { method: 'POST' }),
   policies: () => request<PolicySummary[]>('/policies'),
   policy: (id: number) => request<PolicyDetail>(`/policies/${id}`),
   uploadPolicy: (file: File) => {

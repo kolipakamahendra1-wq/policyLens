@@ -97,6 +97,17 @@ The app is served on http://localhost:8088. The backend reaches Ollama on the ho
 | `EVIDENCE_KEY` | derived from `JWT_SECRET` | Fernet key for evidence at rest (`python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`) |
 | `SEED_PASSWORD` | `policylens` | Password for the seeded demo users |
 
+## Accounts and settings
+
+| Area | What it does |
+|---|---|
+| Sign-up (`/signup`, `POST /register`) | Anyone can create an account. New accounts are engineers, and an admin can grant the reviewer role. Usernames are 3–32 lowercase characters. Passwords need 10+ characters, at least one letter and one number, and can't contain the username. Turn sign-up off with `ALLOW_REGISTRATION=0`. |
+| Dashboard (`/dashboard`) | The home page after sign-in. Engineers see what was sent back to them and their open reviews. Reviewers see the queue of reviews waiting for their decision. Everyone sees finding totals and their own recent activity. |
+| Account settings (`/settings`) | **Profile** (name, email; the username is fixed because audit logs refer to it). **Password** (current password required; changing it signs out every other session). **Sessions & account** (role, member since, last sign-in, sign out other sessions). |
+| Users (`/admin/users`, admin only) | Change roles, deactivate or reactivate accounts (which ends their sessions), and reset a password to a one-time temporary password. There is no email service, so forgotten passwords are reset by an admin. |
+
+Sessions are JWTs that carry a per-user version number. Changing a password, resetting it, signing out everywhere or deactivating an account bumps the version, which invalidates every older token. The shared demo accounts (`alice`, `rita`, `admin`) can't change their password or role, so one visitor can't lock others out of the public demo.
+
 ## Policy format
 
 Any document whose sections are headings works. In Markdown, the title is `#` and sections are `##`. Sentences containing *must*, *shall* or *required* become requirements. Optional metadata and per-requirement tags give precise risk and evidence mapping:
@@ -115,7 +126,7 @@ Without tags, risk and evidence types are inferred from keywords ([backend/taxon
 ## Tests and evaluation
 
 ```bash
-.venv/Scripts/python -m pytest -q                         # 22 tests; needs the Postgres container
+.venv/Scripts/python -m pytest -q                         # 31 tests; needs the Postgres container
 .venv/Scripts/python -m evaluation.run_eval               # offline: rule-based, deterministic (CI)
 .venv/Scripts/python -m evaluation.run_eval --live --limit 10   # free local LLM
 ```

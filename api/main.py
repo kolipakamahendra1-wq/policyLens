@@ -12,26 +12,31 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from agents.graph import match_requirements, run_review
+from api.account import router as account_router
 from backend import audit_package
 from backend.config import CORS_ORIGINS
 from backend.db import (AuditLog, ControlResult, Decision, Evidence, Policy, Requirement, Review, Section,
-                        SessionLocal, User, audit, init_db)
+                        SessionLocal, User, audit, init_db, now)
 from backend.security import create_token, current_user, hash_password, require, verify_password
 from evidence import store
 from evidence.extract import evidence_types, extract_claims, extract_text
 from policies.ingest import ingest, ingest_samples
 
 MAX_UPLOAD = 10 * 1024 * 1024
-SEED_USERS = [("alice", "engineer"), ("rita", "reviewer"), ("admin", "admin")]
+SEED_USERS = [("alice", "engineer", "Alice Chen"), ("rita", "reviewer", "Rita Okafor"), ("admin", "admin", "Admin")]
 
 
 def seed():
     init_db()
     password = os.getenv("SEED_PASSWORD", "policylens")
     with SessionLocal() as s:
-        for name, role in SEED_USERS:
-            if not s.scalar(select(User).where(User.username == name)):
-                s.add(User(username=name, password_hash=hash_password(password), role=role))
+        for name, role, display in SEED_USERS:
+            u = s.scalar(select(User).where(User.username == name))
+            if not u:
+                s.add(User(username=name, password_hash=hash_password(password), role=role, display_name=display,
+                           is_demo=True))
+            elif not u.is_demo:  # accounts seeded before the flag existed
+                u.is_demo, u.display_name = True, u.display_name or display
         if os.getenv("SEED_POLICIES", "1") == "1" and not s.scalar(select(func.count(Policy.id))):
             ingest_samples(s)
         s.commit()
@@ -45,6 +50,7 @@ async def lifespan(_app):
 
 app = FastAPI(title="PolicyLens AI", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+app.include_router(account_router)
 
 
 def db():
@@ -114,14 +120,12 @@ def token(form: OAuth2PasswordRequestForm = Depends(), s: Session = Depends(db))
     user = s.scalar(select(User).where(User.username == form.username))
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(401, "Incorrect username or password")
+    if not user.is_active:
+        raise HTTPException(403, "This account has been deactivated. Contact an administrator.")
+    user.last_login_at = now()
     audit(s, user.username, "auth.login", f"user:{user.id}")
     s.commit()
     return {"access_token": create_token(user), "token_type": "bearer", "username": user.username, "role": user.role}
-
-
-@app.get("/me")
-def me(user: User = Depends(current_user)):
-    return {"username": user.username, "role": user.role}
 
 
 # ---------- setup: policies ----------

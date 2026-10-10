@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -28,9 +29,28 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(test.hex(), dk)
 
 
+USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,31}$")
+MIN_PASSWORD = 10
+
+
+def password_problems(password: str, username: str = "") -> list[str]:
+    """Rules shown to the user; empty list means the password is acceptable."""
+    problems = []
+    if len(password) < MIN_PASSWORD:
+        problems.append(f"Use at least {MIN_PASSWORD} characters.")
+    if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
+        problems.append("Include at least one letter and one number.")
+    if username and username.lower() in password.lower():
+        problems.append("Don't include your username.")
+    if len(password) > 128:
+        problems.append("Use at most 128 characters.")
+    return problems
+
+
 def create_token(user: User) -> str:
     exp = datetime.now(timezone.utc) + timedelta(minutes=JWT_TTL_MINUTES)
-    return jwt.encode({"sub": user.username, "role": user.role, "exp": exp}, JWT_SECRET, algorithm="HS256")
+    claims = {"sub": user.username, "role": user.role, "ver": user.token_version, "exp": exp}
+    return jwt.encode(claims, JWT_SECRET, algorithm="HS256")
 
 
 def current_user(token: str = Depends(oauth2)) -> User:
@@ -41,8 +61,9 @@ def current_user(token: str = Depends(oauth2)) -> User:
                             headers={"WWW-Authenticate": "Bearer"})
     with SessionLocal() as s:
         user = s.scalar(select(User).where(User.username == payload["sub"]))
-    if not user:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unknown user")
+    if not user or not user.is_active or payload.get("ver", 0) != user.token_version:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired or account disabled; sign in again",
+                            headers={"WWW-Authenticate": "Bearer"})
     return user
 
 
